@@ -9,6 +9,8 @@ using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game;
 using System;
 using System.ComponentModel;
+using ECommons.GameFunctions;
+using Zhouyi.Job;
 
 namespace Zhouyi;
 
@@ -51,11 +53,10 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow = new ConfigWindow(this);
         MainWindow = new MainWindow(this, goatImagePath);
-        ESP = new ESP(this, MainWindow);
+        //ESP = new ESP(this, MainWindow);
 
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
-        WindowSystem.AddWindow(ESP);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -70,9 +71,9 @@ public sealed class Plugin : IDalamudPlugin
 
         // Adds another button that is doing the same but for the main ui of the plugin
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
-
-        PluginInterface.UiBuilder.ShowUi += ToggleESP;
-        ESP.Toggle();
+        //PluginInterface.UiBuilder.ShowUi += ToggleESP;
+        //ESP.Toggle();
+        Plugin.Framework.Update += MainFrameWork;
     }
 
     public void Dispose()
@@ -81,8 +82,9 @@ public sealed class Plugin : IDalamudPlugin
 
         ConfigWindow.Dispose();
         MainWindow.Dispose();
-        ESP.Dispose();
+        //ESP.Dispose();
         CommandManager.RemoveHandler(CommandName);
+        Plugin.Framework.Update -= MainFrameWork;
     }
 
     private void OnCommand(string command, string args)
@@ -99,4 +101,13 @@ public sealed class Plugin : IDalamudPlugin
     public void DisposeESP() => ESP.Dispose();
     public void EnableESP() => ESP.TryOn();
 
+    public unsafe void MainFrameWork(IFramework framework)
+    {
+        var me = Plugin.ClientState.LocalPlayer;
+        if (me == null) { return; }
+        if (me.Struct()->ClassJob == 28)
+        {
+            Zhouyi_SCH.OnUpdate(this);
+        }
+    }
 }

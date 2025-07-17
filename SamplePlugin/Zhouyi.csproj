@@ -7,6 +7,7 @@
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="..\Data\background.png">
@@ -16,7 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="ECommons">
-      <HintPath>..\Data\Debug\ECommons.dll</HintPath>
+      <HintPath>..\..\..\Dalamud\Main\Dev\AEAssistCNVersion\AEAssist\ECommons.dll</HintPath>
     </Reference>
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

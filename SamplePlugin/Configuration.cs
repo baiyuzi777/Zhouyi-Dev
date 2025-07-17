@@ -1,6 +1,7 @@
 using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
+using System.Collections.Generic;
 
 namespace Zhouyi;
 
@@ -17,6 +18,11 @@ public class Configuration : IPluginConfiguration
     public float PointSize { get; set; } = 3.0f;
     public bool DrawHPMPValue { get; set; } = true;
     public bool DrawDebugMessage { get; set; } = true;
+    public int SCH_GuDuKuoSanCount = 3;
+    public float SCH_GuDuKuoSanHPLimit = 0.25f;
+    public int SCH_GuDuRange = 25;
+    public List<uint> _statusBlacklist { get; set; } = new List<uint>();
+    public int 不选目标的指定状态id = 0;
     // the below exist just to make saving less cumbersome
     public void Save()
     {

@@ -10,6 +10,12 @@ using Zhouyi.Utils;
 using System.Threading;
 using Lumina.Excel;
 using Dalamud.Plugin;
+using FFXIVClientStructs.FFXIV.Client.Game;
+using ECommons.ExcelServices;
+using ECommons.GameFunctions;
+using Zhouyi.Job;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Zhouyi.Windows;
 
@@ -23,11 +29,11 @@ public class MainWindow : Window, IDisposable
     private object lockObj = new object(); // For thread safety when updating variables
 
     public MainWindow(Plugin plugin, string goatImagePath)
-        : base("Zhouyi-请不要以付费形式购买！", ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground)
+        : base("Zhouyi-请不要以付费形式购买！")
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(550, 300),
+            MinimumSize = new Vector2(550, 400),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
 
@@ -52,27 +58,6 @@ public class MainWindow : Window, IDisposable
     public override void Draw()
     {
 
-        // Load the image from the file
-        var goatImage = Plugin.TextureProvider.GetFromFile(GoatImagePath).GetWrapOrDefault();
-
-        if (goatImage != null)
-        {
-            var windowSize = ImGui.GetWindowSize();
-            var drawList = ImGui.GetWindowDrawList();
-
-            var imageColor = new Vector4(1.0f, 1.0f, 1.0f, imageOpacity);
-
-            drawList.AddImage(goatImage.ImGuiHandle, ImGui.GetWindowPos(), ImGui.GetWindowPos() + windowSize, Vector2.Zero, Vector2.One, ImGui.ColorConvertFloat4ToU32(imageColor));
-        }
-        else
-        {
-            ImGui.Text("Image not found.");
-        }
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.0f, 0.0f, 0.0f, 1.0f)); // Black text
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.7f, 0.7f, 1.0f)); // Gray button
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.0f, 0.5f, 1.0f, 1.0f)); // Lighter blue button on hover
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.0f, 0.3f, 1.0f, 1.0f));  // Darker blue button on click
-
 
         // Other UI elements go on top of the image
         float padding = 10.0f; // 右边距
@@ -85,7 +70,7 @@ public class MainWindow : Window, IDisposable
         // 计算按钮开始的 X 位置，以右对齐
         float startX = windowWidth - totalButtonWidth - padding;
 
-        ImGui.Text("你好，我是你的私人天才妹妹助手！");
+        ImGui.Text("Zhouyi_PvpAuto(BETA)");
         if (ImGui.IsItemHovered())
         {
             ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 1.0f, 1.0f, 1.0f)); // Set tooltip text to white
@@ -134,74 +119,140 @@ public class MainWindow : Window, IDisposable
         ImGui.Separator();
         ImGui.Spacing();
 
-        if (ImGui.Button("配置"))
+        // 标签页实现
+        if (ImGui.BeginTabBar("MyTabBar"))
         {
-            Plugin.ToggleConfigUI();
-        }
-        ImGui.SameLine();
-        if (ImGui.Button("显示/隐藏 透视窗口"))
-        {
-            Plugin.ToggleESP();
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.Text("调试按钮:");
-        ImGui.SameLine();
-        if (ImGui.Button("刷新绘制列表"))
-        {
-            Plugin.EnableESP();
-        }
-
-        ImGui.Text("调整图片透明度:");
-        ImGui.SameLine();
-        ImGui.SliderFloat("Opacity", ref imageOpacity, 0.0f, 1.0f); // Slider to adjust opacity
-        ImGui.Text("当前版本：");
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-        ImGui.Text("2024/10/3");
-        ImGui.PopStyleColor();
-
-        if (Plugin.PluginInterface.IsDev)
-        {
-            lock (lockObj)
+            // 第一个标签页：角色信息
+            if (ImGui.BeginTabItem("角色信息"))
             {
-
-                if (isVerified)
+                var me = Plugin.ClientState.LocalPlayer;
+                unsafe
                 {
-                    ImGui.SameLine();
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-                    ImGui.Text("插件不可用！");
-                    ImGui.PopStyleColor();
-                }
+                    if (me != null)
+                    {
+                        ImGui.Text($"当前职业 {me.Struct()->ClassJob}:{me.ClassJob.Value.Name.ToString()}");
+                        ImGui.SameLine();
+                        ImGui.Text($" 当前血量 {me.CurrentHp}/{me.MaxHp}");
+                        ImGui.SameLine();
 
-                if (!isVerified)
-                {
-                    ImGui.SameLine();
-                    ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-                    ImGui.Text("插件可用！");
-                    ImGui.PopStyleColor();
+                        ImGui.Text($" 龟壳状态 {ActionManager.Instance()->IsActionOffCooldown(ActionType.Action, 29054)}");
+
+                        ImGui.Separator();
+                        ImGui.Spacing();
+
+                        if (me.Struct()->ClassJob == 28)
+                        {
+                            Zhouyi_SCH.OnDraw(Plugin);
+                        }
+                    }
                 }
+                ImGui.EndTabItem();
             }
+
+            // 第二个标签页：设置
+            if (ImGui.BeginTabItem("设置"))
+            {
+                ImGui.Text("这里是全局设置界面");
+                ImGui.Separator();
+                ImGui.Spacing();
+                DrawStatusShield();
+                ImGui.EndTabItem();
+            }
+
+            // 第三个标签页：帮助
+            if (ImGui.BeginTabItem("帮助"))
+            {
+                ImGui.Text("这是帮助标签页");
+                ImGui.TextWrapped("在这里您可以找到关于本插件的使用说明和常见问题解答。如果您遇到任何问题，请前往 Discord 社区寻求帮助。");
+
+                ImGui.Separator();
+                ImGui.Text("常见问题:");
+                ImGui.Text("Q: 如何启用自动模式?");
+                ImGui.Text("A: 在设置标签页中勾选自动模式选项。");
+
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
         }
-        else
+
+
+    }
+
+
+
+
+    public void DrawStatusShield()
+    {
+        var statusIdInput = Plugin.Configuration.不选目标的指定状态id;
+        ImGui.InputInt("状态 ID", ref statusIdInput);
+        if (ImGui.Button("增加指定状态ID"))
         {
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            ImGui.Text("禁止本地加载！");
-            isVerified = true;
-            ImGui.PopStyleColor();
+            Plugin.Configuration.不选目标的指定状态id = statusIdInput;
+            if (Plugin.Configuration._statusBlacklist.Contains((uint)Plugin.Configuration.不选目标的指定状态id)) { return; }
+            Plugin.Configuration._statusBlacklist.Add((uint)Plugin.Configuration.不选目标的指定状态id);
+            //ConfigurationToSave.Save();
+            Plugin.PluginInterface.SavePluginConfig(Plugin.Configuration);
         }
-        ImGui.Text("如果您对图片不喜欢的话可以自己替换插件目录下的");
-        ImGui.SameLine();
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-        ImGui.Text("background.png");
-        ImGui.PopStyleColor();
+        ImGui.Text("遍历选人的屏蔽状态：");
+        if (Plugin.Configuration._statusBlacklist.Count > 0)
+        {
+            ImGui.Separator();
+            // 创建表格
+            if (ImGui.BeginTable("NoSelectStatusTable", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.Resizable))
+            {
+                ImGui.TableSetupColumn("ID", ImGuiTableColumnFlags.WidthFixed, 80.0f);
+                ImGui.TableSetupColumn("状态名称", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("操作", ImGuiTableColumnFlags.WidthFixed, 80.0f);
+                ImGui.TableHeadersRow();
 
+                // 存储要删除的索引
+                var StatusindicesToRemove = new List<int>();
 
-        ImGui.PopStyleColor(4);
+                for (int i = 0; i < Plugin.Configuration._statusBlacklist.Count; i++)
+                {
+                    var status = Plugin.Configuration._statusBlacklist[i];
+                    var statusRow = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Status>().GetRowOrDefault((uint)status);
 
+                    ImGui.TableNextRow();
+                    ImGui.TableNextColumn();
 
+                    if (statusRow != null)
+                    {
+                        ImGui.Text($"{statusRow.Value.RowId}");
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"{statusRow.Value.Name}");
+                    }
+                    else
+                    {
+                        ImGui.Text($"{status}");
+                        ImGui.TableNextColumn();
+                        ImGui.Text($"ERROR!");
+                    }
+
+                    ImGui.TableNextColumn();
+                    if (ImGui.Button($"删除##{i}"))
+                    {
+                        StatusindicesToRemove.Add(i);
+                    }
+                }
+
+                // 在循环外部处理删除操作
+                foreach (var index in StatusindicesToRemove.OrderByDescending(x => x))
+                {
+                    Plugin.Configuration._statusBlacklist.RemoveAt(index);
+                }
+
+                // 只在有删除操作时保存一次
+                if (StatusindicesToRemove.Any())
+                {
+                    Plugin.Configuration.Save();
+                }
+
+                ImGui.EndTable();
+            }
+            else { ImGui.Text("暂无添加的状态"); }
+        }
     }
 }
